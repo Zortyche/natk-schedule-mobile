@@ -1,4 +1,4 @@
-package com.example.collegeschedulemihalev.ui.schedule 
+package com.example.collegeschedulemihalev.ui.schedule
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
