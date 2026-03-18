@@ -4,26 +4,26 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
-import com.example.collegeschedulemihalev.ui.theme.CollegeScheduleMihalevTheme
+import com.example.collegeschedulemihalev.ui.theme.schedule.ScheduleScreen
+import com.example.collegeschedulemihalev.ui.theme.CollegeScheduleMihalevTheme  // Изменено!
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,64 +31,44 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CollegeScheduleMihalevTheme {
-                CollegeScheduleMihalevApp()
+                CollegeScheduleApp()
             }
         }
     }
 }
 
-@PreviewScreenSizes
-@Composable
-fun CollegeScheduleMihalevApp() {
-    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
+// Перечисление для экранов навигации
+enum class AppScreens(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Home("Расписание", Icons.Default.Home),
+    Favorites("Избранное", Icons.Default.Favorite),
+    Profile("Профиль", Icons.Default.Person)
+}
 
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            AppDestinations.entries.forEach {
-                item(
-                    icon = {
-                        Icon(
-                            it.icon,
-                            contentDescription = it.label
-                        )
-                    },
-                    label = { Text(it.label) },
-                    selected = it == currentDestination,
-                    onClick = { currentDestination = it }
-                )
+@Composable
+fun CollegeScheduleApp() {
+    var currentScreen by rememberSaveable { mutableStateOf(AppScreens.Home) }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        bottomBar = {
+            NavigationBar {
+                AppScreens.values().forEach { screen ->
+                    NavigationBarItem(
+                        selected = currentScreen == screen,
+                        onClick = { currentScreen = screen },
+                        icon = { Icon(screen.icon, contentDescription = screen.title) },
+                        label = { Text(screen.title) }
+                    )
+                }
             }
         }
-    ) {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            Greeting(
-                name = "Android",
-                modifier = Modifier.padding(innerPadding)
-            )
+    ) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding)) {
+            when (currentScreen) {
+                AppScreens.Home -> ScheduleScreen()
+                AppScreens.Favorites -> Text("Экран избранного (пока пусто)")
+                AppScreens.Profile -> Text("Экран профиля (пока пусто)")
+            }
         }
-    }
-}
-
-enum class AppDestinations(
-    val label: String,
-    val icon: ImageVector,
-) {
-    HOME("Home", Icons.Default.Home),
-    FAVORITES("Favorites", Icons.Default.Favorite),
-    PROFILE("Profile", Icons.Default.AccountBox),
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    CollegeScheduleMihalevTheme {
-        Greeting("Android")
     }
 }
