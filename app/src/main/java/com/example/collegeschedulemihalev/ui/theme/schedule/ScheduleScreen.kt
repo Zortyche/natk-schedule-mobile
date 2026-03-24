@@ -1,15 +1,20 @@
-package com.example.collegeschedulemihalev.ui.schedule
+package com.example.collegeschedulemihalev.ui.theme.schedule
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -17,6 +22,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,39 +30,48 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.collegeschedulemihalev.data.datastore.FavoritesManager
 import com.example.collegeschedulemihalev.data.dto.ScheduleByDateDto
 import com.example.collegeschedulemihalev.data.network.RetrofitInstance
 import com.example.collegeschedulemihalev.data.repository.ScheduleRepository
 import com.example.collegeschedulemihalev.ui.theme.components.getWeekDateRange
+import com.example.collegeschedulemihalev.ui.theme.viewmodel.SharedViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScheduleScreen() {
+fun ScheduleScreen(
+    sharedViewModel: SharedViewModel,
+    favoritesManager: FavoritesManager
+) {
     val repository = remember { ScheduleRepository(RetrofitInstance.api) }
 
-    // Состояния для списка групп
+    val selectedGroup by sharedViewModel.selectedGroup.collectAsState()
+
     var groupList by remember { mutableStateOf<List<String>>(emptyList()) }
-    var selectedGroup by remember { mutableStateOf("ИС-12") } // Значение по умолчанию
     var isLoadingGroups by remember { mutableStateOf(true) }
     var groupsError by remember { mutableStateOf<String?>(null) }
 
-    // Состояния для расписания
     var schedule by remember { mutableStateOf<List<ScheduleByDateDto>>(emptyList()) }
     var isLoadingSchedule by remember { mutableStateOf(false) }
     var scheduleError by remember { mutableStateOf<String?>(null) }
 
-    // Состояния для выпадающего списка
     var expanded by remember { mutableStateOf(false) }
-    var searchText by remember { mutableStateOf("ИС-12") }
+    var searchText by remember { mutableStateOf("") }
 
-    // 1. Загружаем список групп при первом запуске
+    var isFavorite by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         isLoadingGroups = true
         groupsError = null
         try {
             groupList = repository.loadGroups()
-            if (groupList.isNotEmpty()) {
-                selectedGroup = groupList.first()
+            if (groupList.isNotEmpty() && selectedGroup.isEmpty()) {
+                sharedViewModel.selectGroup(groupList.first())
+                searchText = groupList.first()
+            } else {
                 searchText = selectedGroup
             }
         } catch (e: Exception) {
@@ -66,7 +81,12 @@ fun ScheduleScreen() {
         }
     }
 
-    // 2. Загружаем расписание при изменении выбранной группы
+    LaunchedEffect(selectedGroup) {
+        if (selectedGroup.isNotEmpty()) {
+            isFavorite = favoritesManager.isFavorite(selectedGroup)
+        }
+    }
+
     LaunchedEffect(selectedGroup) {
         if (selectedGroup.isNotEmpty()) {
             isLoadingSchedule = true
@@ -82,7 +102,6 @@ fun ScheduleScreen() {
         }
     }
 
-    // Фильтруем группы по тексту поиска
     val filteredGroups = groupList.filter {
         it.contains(searchText, ignoreCase = true)
     }
@@ -90,7 +109,23 @@ fun ScheduleScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Расписание") }
+                title = { Text("Расписание") },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                favoritesManager.toggleFavorite(selectedGroup)
+                                isFavorite = favoritesManager.isFavorite(selectedGroup)
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (isFavorite) "Удалить из избранного" else "Добавить в избранное",
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -99,7 +134,6 @@ fun ScheduleScreen() {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Блок выбора группы
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -146,7 +180,7 @@ fun ScheduleScreen() {
                                 DropdownMenuItem(
                                     text = { Text(group) },
                                     onClick = {
-                                        selectedGroup = group
+                                        sharedViewModel.selectGroup(group)
                                         searchText = group
                                         expanded = false
                                     }
@@ -157,7 +191,6 @@ fun ScheduleScreen() {
                 }
             }
 
-            // Блок отображения расписания
             Box(
                 modifier = Modifier
                     .weight(1f)

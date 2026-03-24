@@ -1,4 +1,4 @@
-package com.example.collegeschedulemihalev.ui.schedule
+package com.example.collegeschedulemihalev.ui.theme.schedule
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,13 +26,11 @@ fun ScheduleList(schedule: List<ScheduleByDateDto>) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(schedule) { daySchedule ->
-            // Заголовок дня
             Text(
                 text = "${daySchedule.lessonDate} (${daySchedule.weekday})",
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
-            // Карточки пар на этот день
             daySchedule.lessons.forEach { lesson ->
                 LessonCard(lesson = lesson)
             }
@@ -48,15 +46,11 @@ fun LessonCard(lesson: LessonDto) {
             .padding(vertical = 4.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            // Время и номер пары
             Text(
                 text = "Пара ${lesson.lessonNumber}: ${lesson.time}",
                 style = MaterialTheme.typography.titleMedium
             )
-
             Spacer(modifier = Modifier.padding(4.dp))
-
-            // Отображение частей группы
             lesson.groupParts.forEach { (part, partDetail) ->
                 when (part) {
                     LessonGroupPart.FULL -> {

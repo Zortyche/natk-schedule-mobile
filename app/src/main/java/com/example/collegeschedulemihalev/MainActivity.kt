@@ -22,22 +22,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.example.collegeschedulemihalev.ui.schedule.ScheduleScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.collegeschedulemihalev.data.datastore.FavoritesManager
+import com.example.collegeschedulemihalev.ui.theme.schedule.FavoritesScreen
+import com.example.collegeschedulemihalev.ui.theme.schedule.ScheduleScreen
 import com.example.collegeschedulemihalev.ui.theme.CollegeScheduleMihalevTheme
+import com.example.collegeschedulemihalev.ui.theme.viewmodel.SharedViewModel
+import com.example.collegeschedulemihalev.ui.theme.viewmodel.SharedViewModelFactory
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var favoritesManager: FavoritesManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        favoritesManager = FavoritesManager(this)
         enableEdgeToEdge()
         setContent {
             CollegeScheduleMihalevTheme {
-                CollegeScheduleApp()
+                CollegeScheduleApp(favoritesManager)
             }
         }
     }
 }
 
-// Перечисление для экранов навигации
 enum class AppScreens(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     Home("Расписание", Icons.Default.Home),
     Favorites("Избранное", Icons.Default.Favorite),
@@ -45,7 +53,11 @@ enum class AppScreens(val title: String, val icon: androidx.compose.ui.graphics.
 }
 
 @Composable
-fun CollegeScheduleApp() {
+fun CollegeScheduleApp(favoritesManager: FavoritesManager) {
+    val sharedViewModel: SharedViewModel = viewModel(
+        factory = SharedViewModelFactory(favoritesManager)
+    )
+
     var currentScreen by rememberSaveable { mutableStateOf(AppScreens.Home) }
 
     Scaffold(
@@ -65,9 +77,24 @@ fun CollegeScheduleApp() {
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (currentScreen) {
-                AppScreens.Home -> ScheduleScreen()
-                AppScreens.Favorites -> Text("Экран избранного (пока пусто)")
-                AppScreens.Profile -> Text("Экран профиля (пока пусто)")
+                AppScreens.Home -> {
+                    ScheduleScreen(
+                        sharedViewModel = sharedViewModel,
+                        favoritesManager = favoritesManager
+                    )
+                }
+                AppScreens.Favorites -> {
+                    FavoritesScreen(
+                        favoritesManager = favoritesManager,
+                        onGroupSelected = { groupName ->
+                            sharedViewModel.selectGroup(groupName)
+                            currentScreen = AppScreens.Home
+                        }
+                    )
+                }
+                AppScreens.Profile -> {
+                    Text("Экран профиля (пока пусто)")
+                }
             }
         }
     }
